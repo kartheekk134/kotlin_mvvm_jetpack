@@ -1,10 +1,9 @@
 package com.kotlinlearning
 
 import android.content.Context
-import android.inputmethodservice.Keyboard.Row
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,36 +13,35 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Shapes
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 @Composable
 fun MyFirstScreen(context: Context) {
 //    var textChange = remember { mutableStateOf("Click Me") }
-    var bgColor = remember { mutableStateOf(Color.Black) }
-    var clicked = remember { mutableStateOf(false) }
+//    var bgColor = remember { mutableStateOf(Color.Black) }
+//    var clicked = remember { mutableStateOf(false) }
     /*Column(
         modifier = Modifier
             .fillMaxSize()
@@ -88,8 +86,9 @@ fun MyFirstScreen(context: Context) {
 //            Challenge2(context)
 //            Counter()
 //    ShowList()
-//    showMutableList()
-    TODOList()
+//    showMutableList(navController)
+//    TODOList()
+    Navigation()
 }
 
 
@@ -171,9 +170,8 @@ fun ShowList() {
 }
 
 @Composable
-fun showMutableList() {
+fun showMutableList(navController: NavController) {
     val items = remember { mutableStateOf(listOf("Apple", "Banana", "Grape", "Papaya")) }
-
     Column {
         Button(onClick = {
             items.value = items.value + "New Task"
@@ -183,7 +181,12 @@ fun showMutableList() {
 
         LazyColumn {
             items(items.value) { task ->
-                Text(task, modifier = Modifier.padding(8.dp))
+                Text(task, modifier = Modifier
+                    .padding(8.dp)
+                    .clickable {
+                        // ✅ Handle onClick here
+                        navController.navigate("details/$task")
+                    })
             }
         }
     }
@@ -221,6 +224,125 @@ fun TODOList() {
             items(items.value) { task ->
                 Text(task, modifier = Modifier.padding(8.dp))
             }
+        }
+    }
+}
+
+@Composable
+fun Navigation(){
+    val navController = rememberNavController()
+
+    NavHost(navController, startDestination = "login"){
+
+        composable("login"){LoginForm(navController)}
+        composable("details/{name}/{email}"){ it ->
+            val  name = it.arguments?.getString("name")
+            val  email = it.arguments?.getString("email")
+            DetailsScreen(name,email)}
+    }
+
+}
+
+@Composable
+fun HomeScreen(navController: NavController) {
+    Button(onClick = { navController.navigate("details/Kartheek") }) {
+        Text("Go to Details")
+    }
+}
+
+@Composable
+fun DetailsScreen(name: String?, email1: String?) {
+    Text("Name is: $name and Email is $email1")
+}
+
+@Composable
+fun LoginForm(navController: NavHostController) {
+    var name = remember { mutableStateOf("") }
+    var email = remember { mutableStateOf("") }
+    var password = remember { mutableStateOf("") }
+    var confirmPassword = remember { mutableStateOf("") }
+    var phone = remember { mutableStateOf("") }
+    var error = remember { mutableStateOf("") }
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        OutlinedTextField(value = name.value, onValueChange = { name.value = it }, label = { Text("Name") })
+        OutlinedTextField(value = email.value, onValueChange = { email.value = it }, label = { Text("Email") })
+        OutlinedTextField(
+            value = password.value,
+            onValueChange = { password.value = it },
+            label = { Text("Password") },
+            visualTransformation = PasswordVisualTransformation()
+        )
+        OutlinedTextField(
+            value = confirmPassword.value,
+            onValueChange = { confirmPassword.value = it },
+            label = { Text("Confirm Password") },
+            visualTransformation = PasswordVisualTransformation()
+        )
+        OutlinedTextField(
+            value = phone.value,
+            onValueChange = {
+                // ✅ Allow only digits
+                if (it.all { char -> char.isDigit() }) {
+                    phone.value = it
+                    error.value = ""
+                } else {
+                    error.value = "Only digits allowed"
+                }
+            },
+            label = { Text("Phone Number") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            isError = error.value.isNotEmpty()
+        )
+
+        if (error.value.isNotEmpty()) {
+            Text(
+                text = error.value,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = {
+            if (name.value.isEmpty()) {
+                Toast.makeText(navController.context, "Name is required", Toast.LENGTH_SHORT).show()
+                return@Button
+            }
+
+            if (email.value.isEmpty()) {
+                Toast.makeText(navController.context, "Email is required", Toast.LENGTH_SHORT).show()
+                return@Button
+            }
+
+            if (password.value.isEmpty()) {
+                Toast.makeText(navController.context, "Password is required", Toast.LENGTH_SHORT).show()
+                return@Button
+            }
+
+            if (confirmPassword.value.isEmpty()) {
+                Toast.makeText(navController.context, "Confirm Password is required", Toast.LENGTH_SHORT).show()
+                return@Button
+            }
+
+            if (!password.value.equals(confirmPassword.value)) {
+                Toast.makeText(navController.context, "Password not matched", Toast.LENGTH_SHORT).show()
+                return@Button
+            }
+
+            if (phone.value.isEmpty()) {
+                error.value = "Phone number cannot be empty"
+                return@Button
+            }
+            else error.value = ""
+
+
+            Toast.makeText(navController.context, "Login Successful", Toast.LENGTH_SHORT).show()
+            navController.navigate("details/${name.value}/${email.value}")
+
+        }) {
+            Text("Submit")
         }
     }
 }
